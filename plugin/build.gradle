@@ -37,7 +37,7 @@ pluginBundle {
     }
 
     mavenCoordinates {
-        groupId = group
+        groupId = 'systems.manifold'
         artifactId = 'manifold-gradle-plugin'
     }
 }
