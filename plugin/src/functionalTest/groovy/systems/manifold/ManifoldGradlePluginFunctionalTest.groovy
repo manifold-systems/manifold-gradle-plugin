@@ -18,7 +18,11 @@ class ManifoldGradlePluginFunctionalTest extends Specification {
         new File(projectDir, 'settings.gradle')
     }
 
-    def 'plugin can compile with properties and extensions successfully'() {
+    private getMainSourceRoot() {
+        new File(projectDir, 'src/main/java')
+    }
+
+    def setup() {
         given:
         settingsFile << ''
         buildFile << '''
@@ -42,6 +46,7 @@ class ManifoldGradlePluginFunctionalTest extends Specification {
             |  doFirst {
             |    logger.lifecycle 'Invoking javac with arguments: {}', options.compilerArgs
             |    logger.lifecycle 'Invoking javac with annotationProcessorPath: {}', options.annotationProcessorPath.files*.name            
+            |    logger.lifecycle 'Invoking javac with sourcepath: {}', options.sourcepath?.files*.name ?: '<empty>'
             |    logger.lifecycle 'Invoking javac with compileClasspath: {}', classpath.files*.name
             |    logger.lifecycle 'Invoking javac with source: {}', source*.name
             |  }
@@ -116,7 +121,8 @@ class ManifoldGradlePluginFunctionalTest extends Specification {
         '''.stripMargin()
 
         // main sources
-        def mainSources = new File(projectDir, 'src/main/java/com/example')
+        mainSourceRoot.mkdirs()
+        def mainSources = new File(mainSourceRoot, 'com/example')
         mainSources.mkdirs()
         def main = new File(mainSources, 'Main.java')
         main << '''
@@ -169,7 +175,9 @@ class ManifoldGradlePluginFunctionalTest extends Specification {
         |  }
         |}
         '''.stripMargin()
+    }
 
+    def 'plugin can compile with properties and extensions successfully'() {
         when:
         def runner = GradleRunner.create()
                 .withProjectDir(projectDir)
@@ -181,5 +189,48 @@ class ManifoldGradlePluginFunctionalTest extends Specification {
 
         then:
         result.task(':compileJava').outcome == TaskOutcome.SUCCESS
+    }
+
+    def 'infers module-path successfully (requires Gradle 6.4+)'() {
+        when: 'adding a module-info and new dependency'
+        mainSourceRoot.mkdirs()
+        def moduleInfo = new File(mainSourceRoot, 'module-info.java')
+        moduleInfo << '''module com.example {
+            |    requires com.google.gson;
+            |    requires transitive manifold.ext.rt;
+            |}'''.stripMargin()
+
+        buildFile << '''
+            |dependencies {
+            |  implementation 'com.google.code.gson:gson:2.8.8'
+            |}
+            '''.stripMargin()
+
+        def runner = GradleRunner.create()
+                .withProjectDir(projectDir)
+                .withPluginClasspath()
+                .withArguments('assemble')
+                .forwardOutput()
+
+        def result = runner.build()
+
+        then: 'compilation succeeds'
+        result.task(':compileJava').outcome == TaskOutcome.SUCCESS
+        result.output.contains 'src/main/java/module-info.java:3: warning: requires transitive directive for an automatic module'
+    }
+
+    def 'cannot be applied with < Gradle 6.4'() {
+        when:
+        def runner = GradleRunner.create()
+                .withProjectDir(projectDir)
+                .withPluginClasspath()
+                .withArguments('assemble', '-s')
+                .forwardOutput()
+                .withGradleVersion('6.3')
+
+        def result = runner.buildAndFail()
+
+        then:
+        result.output.contains 'The manifold plugin requires Gradle 6.4+ to correctly infer the module-path'
     }
 }
