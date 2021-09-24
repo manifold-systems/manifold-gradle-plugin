@@ -1,0 +1,2 @@
+rootProject.name = 'manifold-gradle-plugin'
+include('plugin')
