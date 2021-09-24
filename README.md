@@ -10,7 +10,7 @@ A project extension `manifold` is added with a convenience property `manifoldVer
 Example application:
 ```groovy
 plugins {
-    id 'systems.manifold.manifold-gradle-plugin'
+    id 'systems.manifold.manifold-gradle-plugin' version '0.0.2-alpha'
 }
 
 repositories {
