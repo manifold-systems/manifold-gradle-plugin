@@ -1,4 +1,5 @@
 plugins {
+    id 'com.gradle.plugin-publish' version '0.16.0'
     id 'groovy-gradle-plugin'
 }
 
@@ -14,10 +15,30 @@ dependencies {
 gradlePlugin {
     // Define the plugin
     plugins {
-        greeting {
+        manifoldPlugin {
             id = 'systems.manifold.manifold-gradle-plugin'
             implementationClass = 'systems.manifold.ManifoldGradlePlugin'
         }
+    }
+}
+
+pluginBundle {
+    website = 'http://manifold.systems/'
+    vcsUrl = 'https://github.com/manifold-systems/manifold-gradle-plugin'
+    description = '''Manifold is a Java compiler plugin, its features include Metaprogramming, Properties, Extension Methods, Operator Overloading, a Preprocessor, and a lot more.
+                    |
+                    |This Gradle plugin configures JavaCompile tasks to support the manifold compiler plugin.'''.stripMargin()
+    tags = ['manifold', 'javac', 'compiler', 'compiler-plugin']
+
+    plugins {
+        manifoldPlugin {
+            displayName = 'Manifold plugin for Gradle'
+        }
+    }
+
+    mavenCoordinates {
+        groupId = group
+        artifactId = 'manifold-gradle-plugin'
     }
 }
 
